@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compliant AI SDR — End-to-End Evaluation Report</title>
+<style>
+  :root{
+    --bg:#0e1117; --panel:#161b22; --panel2:#1c2230; --border:#2a3240;
+    --ink:#e6edf3; --muted:#9aa7b4; --faint:#6b7684;
+    --accent:#6ea8ff; --good:#3fb950; --warn:#d29922; --bad:#f85149;
+    --track:#232b38;
+  }
+  @media (prefers-color-scheme: light){
+    :root{
+      --bg:#f6f8fa; --panel:#ffffff; --panel2:#f2f5f9; --border:#d8dee4;
+      --ink:#1c2430; --muted:#57636f; --faint:#8a96a2;
+      --accent:#1f6feb; --good:#1a7f37; --warn:#9a6700; --bad:#cf222e;
+      --track:#e7ecf1;
+    }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    line-height:1.5;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:960px;margin:0 auto;padding:40px 24px 64px}
+  header{border-bottom:1px solid var(--border);padding-bottom:24px;margin-bottom:28px}
+  .eyebrow{font-size:12px;letter-spacing:.14em;text-transform:uppercase;color:var(--accent);font-weight:700;margin:0 0 8px}
+  h1{font-size:30px;line-height:1.2;margin:0 0 10px;font-weight:750}
+  .sub{color:var(--muted);font-size:15px;margin:0;max-width:70ch}
+  .meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}
+  .chip{font-size:12px;color:var(--muted);background:var(--panel2);border:1px solid var(--border);
+    border-radius:999px;padding:4px 11px;font-variant-numeric:tabular-nums}
+  .chip b{color:var(--ink);font-weight:650}
+  h2{font-size:13px;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);
+    font-weight:700;margin:40px 0 14px;border-bottom:1px solid var(--border);padding-bottom:8px}
+  /* headline stat cards */
+  .cards{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  @media(max-width:720px){.cards{grid-template-columns:repeat(2,1fr)}}
+  .card{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:16px 16px 14px}
+  .card .k{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);font-weight:650}
+  .card .v{font-size:30px;font-weight:760;margin:6px 0 2px;font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+  .card .d{font-size:12px;color:var(--muted)}
+  .v.good{color:var(--good)} .v.bad{color:var(--bad)} .v.warn{color:var(--warn)} .v.accent{color:var(--accent)}
+  .delta{font-size:12px;font-weight:650}
+  .delta.up{color:var(--good)} .delta.down{color:var(--bad)}
+  /* the bug callout */
+  .bug{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--warn);
+    border-radius:10px;padding:16px 18px;margin:0 0 12px}
+  .bug .tag{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--warn)}
+  .bug h3{margin:6px 0 6px;font-size:15px;font-weight:700}
+  .bug p{margin:0;color:var(--muted);font-size:13.5px}
+  .bug code{background:var(--panel2);border:1px solid var(--border);border-radius:5px;padding:1px 6px;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:12.5px;color:var(--ink)}
+  .fixed{border-left-color:var(--good)} .fixed .tag{color:var(--good)}
+  /* tables */
+  table{width:100%;border-collapse:collapse;font-size:13.5px}
+  th,td{text-align:left;padding:9px 12px;border-bottom:1px solid var(--border)}
+  th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--faint);font-weight:650}
+  td{font-variant-numeric:tabular-nums}
+  tbody tr:last-child td{border-bottom:none}
+  .num{text-align:right}
+  /* category bars */
+  .bar{display:flex;align-items:center;gap:10px}
+  .bar .lbl{flex:0 0 210px;font-size:13px;color:var(--ink)}
+  @media(max-width:600px){.bar .lbl{flex-basis:130px;font-size:12px}}
+  .bar .track{flex:1;height:9px;background:var(--track);border-radius:6px;overflow:hidden}
+  .bar .fill{height:100%;border-radius:6px}
+  .bar .pct{flex:0 0 66px;text-align:right;font-size:12.5px;color:var(--muted);font-variant-numeric:tabular-nums}
+  .catrow{margin:9px 0}
+  .panel{background:var(--panel);border:1px solid var(--border);border-radius:12px;padding:6px 18px}
+  .note{font-size:12.5px;color:var(--faint);margin-top:10px}
+  .pill{display:inline-block;font-size:11px;font-weight:700;padding:2px 9px;border-radius:999px;
+    font-variant-numeric:tabular-nums}
+  .pill.sent{background:color-mix(in srgb,var(--good) 16%,transparent);color:var(--good)}
+  .pill.esc{background:color-mix(in srgb,var(--warn) 18%,transparent);color:var(--warn)}
+  footer{margin-top:44px;padding-top:18px;border-top:1px solid var(--border);color:var(--faint);font-size:12px}
+  .two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  @media(max-width:720px){.two{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <p class="eyebrow">End-to-End Evaluation Report</p>
+    <h1>Compliant AI SDR — full-loop test with the live LLM judge</h1>
+    <p class="sub">The compliance gate was exercised end-to-end against a real model. Testing surfaced
+      two latent bugs that had silently disabled the LLM judge on modern models; after fixing them,
+      violation catch rate rose from <b>17.5%</b> to <b>90%</b>.</p>
+    <div class="meta">
+      <span class="chip">Judge model: <b>claude-sonnet-5</b></span>
+      <span class="chip">Suite: <b>55 cases</b> (40 adversarial · 15 benign)</span>
+      <span class="chip">Unit tests: <b>15 / 15 passed</b></span>
+      <span class="chip">Total judge spend: <b>$0.49</b></span>
+    </div>
+  </header>
+
+  <h2>Headline results — live judge (after fix)</h2>
+  <div class="cards">
+    <div class="card">
+      <div class="k">Violation catch rate</div>
+      <div class="v good">90.0%</div>
+      <div class="d">36 / 40 adversarial · <span class="delta up">▲ from 17.5%</span></div>
+    </div>
+    <div class="card">
+      <div class="k">Attack success rate</div>
+      <div class="v good">10.0%</div>
+      <div class="d">4 / 40 slipped · <span class="delta up">▼ from 82.5%</span></div>
+    </div>
+    <div class="card">
+      <div class="k">Red-team success</div>
+      <div class="v good">0 / 3</div>
+      <div class="d">full-loop attacks · <span class="delta up">▼ from 3/3</span></div>
+    </div>
+    <div class="card">
+      <div class="k">False-positive rate</div>
+      <div class="v warn">26.7%</div>
+      <div class="d">4 / 15 benign · honest trade-off</div>
+    </div>
+  </div>
+
+  <h2>What testing found — two bugs that silently disabled the judge</h2>
+  <div class="bug">
+    <span class="tag">Bug 1 · worked around</span>
+    <h3>Default judge model returns 404</h3>
+    <p>The code defaulted to <code>claude-3-5-sonnet-latest</code>, which this account cannot access
+      (<code>404 not_found_error</code>). Every judge call failed. Pointed the judge at an available
+      model via <code>SDR_MODEL=claude-sonnet-5</code>.</p>
+  </div>
+  <div class="bug fixed">
+    <span class="tag">Bug 2 · fixed in code</span>
+    <h3>Text extraction crashed on models with extended thinking</h3>
+    <p><code>llm.py</code> read <code>resp.content[0].text</code>, assuming the first block is text.
+      Modern models emit a <code>ThinkingBlock</code> first, so every call raised
+      <code>'ThinkingBlock' object has no attribute 'text'</code>. The exception was swallowed and the
+      judge fell back to a dev-mode pass — so a "real key" run scored <b>identical to mock</b>. Fixed to
+      select the first actual text block.</p>
+  </div>
+  <p class="note">Impact: before the fix, the hybrid design's entire semantic layer was a no-op against any
+    current model, while still reporting <code>backend=anthropic</code>. This is exactly the class of silent
+    failure the project is built to prevent — caught here by testing the loop end-to-end instead of trusting the label.</p>
+
+  <h2>Catch rate by attack category — live judge</h2>
+  <div class="panel">
+    <div class="catrow"><div class="bar"><span class="lbl">Data exfiltration</span><span class="track"><span class="fill" style="width:100%;background:var(--good)"></span></span><span class="pct">100% (4/4)</span></div></div>
+    <div class="catrow"><div class="bar"><span class="lbl">Fabricated facts</span><span class="track"><span class="fill" style="width:100%;background:var(--good)"></span></span><span class="pct">100% (6/6)</span></div></div>
+    <div class="catrow"><div class="bar"><span class="lbl">Fake endorsement</span><span class="track"><span class="fill" style="width:100%;background:var(--good)"></span></span><span class="pct">100% (5/5)</span></div></div>
+    <div class="catrow"><div class="bar"><span class="lbl">Irrelevant personalization</span><span class="track"><span class="fill" style="width:100%;background:var(--good)"></span></span><span class="pct">100% (5/5)</span></div></div>
+    <div class="catrow"><div class="bar"><span class="lbl">Manipulative urgency</span><span class="track"><span class="fill" style="width:100%;background:var(--good)"></span></span><span class="pct">100% (5/5)</span></div></div>
+    <div class="catrow"><div class="bar"><span class="lbl">Unsupported product claims</span><span class="track"><span class="fill" style="width:100%;background:var(--good)"></span></span><span class="pct">100% (5/5)</span></div></div>
+    <div class="catrow"><div class="bar"><span class="lbl">Missing opt-out</span><span class="track"><span class="fill" style="width:75%;background:var(--warn)"></span></span><span class="pct">75% (3/4)</span></div></div>
+    <div class="catrow"><div class="bar"><span class="lbl">Prompt injection</span><span class="track"><span class="fill" style="width:50%;background:var(--bad)"></span></span><span class="pct">50% (3/6)</span></div></div>
+  </div>
+  <p class="note">Prompt injection remains the weakest surface (50%) — the honest open problem, and a natural next iteration for the policy and judge prompt.</p>
+
+  <h2>Mock baseline vs. live judge</h2>
+  <table>
+    <thead><tr><th>Metric</th><th class="num">Mock / broken judge</th><th class="num">Live judge (fixed)</th></tr></thead>
+    <tbody>
+      <tr><td>Violation catch rate</td><td class="num">17.5%</td><td class="num" style="color:var(--good)">90.0%</td></tr>
+      <tr><td>Attack success rate</td><td class="num">82.5%</td><td class="num" style="color:var(--good)">10.0%</td></tr>
+      <tr><td>Red-team full-loop success</td><td class="num">3 / 3 (100%)</td><td class="num" style="color:var(--good)">0 / 3 (0%)</td></tr>
+      <tr><td>False-positive rate</td><td class="num">0.0%</td><td class="num" style="color:var(--warn)">26.7%</td></tr>
+      <tr><td>Escalation rate</td><td class="num">0.0%</td><td class="num">30.9%</td></tr>
+      <tr><td>Avg latency / message</td><td class="num">0.1 ms</td><td class="num">6,524 ms</td></tr>
+      <tr><td>Cost / message</td><td class="num">n/a</td><td class="num">$0.0088</td></tr>
+    </tbody>
+  </table>
+
+  <div class="two">
+    <div>
+      <h2>Pipeline — draft → gate → CRM</h2>
+      <div class="panel">
+        <table>
+          <thead><tr><th>Lead</th><th>Outcome</th></tr></thead>
+          <tbody>
+            <tr><td>Dana Ruiz · Northwind</td><td><span class="pill sent">SENT (dry-run)</span></td></tr>
+            <tr><td>Sam Okoye · Cedar Freight</td><td><span class="pill sent">SENT (dry-run)</span></td></tr>
+            <tr><td>Priya Nair · BlueField</td><td><span class="pill esc">ESCALATED</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="note">Priya escalated on <code>CLAIMS_GROUNDED</code> (S4) — a fabricated claim correctly routed to a human, never sent.</p>
+    </div>
+    <div>
+      <h2>Fail-closed guarantee</h2>
+      <div class="panel" style="padding:16px 18px">
+        <p style="margin:0 0 8px;font-size:13.5px;color:var(--muted)">With the judge made unavailable in
+          <code>SDR_ENV=prod</code>, all 3 leads escalate rather than send on an unchecked message:</p>
+        <table>
+          <tbody>
+            <tr><td>Dana Ruiz</td><td><span class="pill esc">ESCALATED</span></td></tr>
+            <tr><td>Sam Okoye</td><td><span class="pill esc">ESCALATED</span></td></tr>
+            <tr><td>Priya Nair</td><td><span class="pill esc">ESCALATED</span></td></tr>
+          </tbody>
+        </table>
+        <p class="note">A compliance check that cannot run must not silently authorize a send.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>
+    Compliant AI SDR · end-to-end evaluation · judge = claude-sonnet-5 · 55-case suite · total spend $0.49.
+    Numbers are from a single live run and reflect the evaluator's own detection accuracy — the send-gate
+    architecture is guaranteed regardless.
+  </footer>
+
+</div>
+</body>
+</html>

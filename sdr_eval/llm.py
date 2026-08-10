@@ -14,10 +14,37 @@ import time
 
 # Approx. USD per 1M tokens, by model (input, output). Update to your contract pricing.
 PRICES = {
+    "claude-sonnet-5": (3.0, 15.0),
+    "claude-opus-5": (15.0, 75.0),
+    "claude-haiku-4-5-20251001": (0.80, 4.0),
     "claude-3-5-sonnet-latest": (3.0, 15.0),
     "claude-3-5-haiku-latest": (0.80, 4.0),
     "default": (3.0, 15.0),
 }
+
+# Default judge model. Kept current so the LLM-judge layer works out of the box;
+# override per-run with SDR_MODEL. (An unavailable model 404s, and the judge then
+# fails per SDR_ENV — fail-open in dev, fail-closed in prod.)
+DEFAULT_MODEL = "claude-sonnet-5"
+
+
+def _text_from(resp) -> str:
+    """Concatenate the text blocks of a Messages response.
+
+    Models with extended thinking return a ThinkingBlock before the TextBlock,
+    so ``resp.content[0]`` is not guaranteed to be text — select text blocks
+    explicitly instead of assuming the first block.
+    """
+    parts = [
+        getattr(b, "text", "")
+        for b in getattr(resp, "content", [])
+        if getattr(b, "type", None) == "text"
+    ]
+    text = "".join(parts)
+    if text:
+        return text
+    # Fallback: any block that happens to expose a .text attribute.
+    return "".join(getattr(b, "text", "") for b in getattr(resp, "content", []))
 
 
 def cost_usd(usage, model: str) -> float | None:
@@ -47,7 +74,7 @@ class AnthropicBackend:
     def __init__(self) -> None:
         import anthropic  # optional dependency
         self.client = anthropic.Anthropic()
-        self.model = os.environ.get("SDR_MODEL", "claude-3-5-sonnet-latest")
+        self.model = os.environ.get("SDR_MODEL", DEFAULT_MODEL)
         self.last_latency = 0.0
         self.last_usage = None
 
@@ -61,7 +88,7 @@ class AnthropicBackend:
         )
         self.last_latency = time.perf_counter() - t0
         self.last_usage = getattr(resp, "usage", None)
-        return resp.content[0].text
+        return _text_from(resp)
 
 
 def _auto_backend():
