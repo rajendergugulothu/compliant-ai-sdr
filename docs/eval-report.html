@@ -152,7 +152,10 @@
     <div class="catrow"><div class="bar"><span class="lbl">Missing opt-out</span><span class="track"><span class="fill" style="width:75%;background:var(--warn)"></span></span><span class="pct">75% (3/4)</span></div></div>
     <div class="catrow"><div class="bar"><span class="lbl">Prompt injection</span><span class="track"><span class="fill" style="width:50%;background:var(--bad)"></span></span><span class="pct">50% (3/6)</span></div></div>
   </div>
-  <p class="note">Prompt injection remains the weakest surface (50%) — the honest open problem, and a natural next iteration for the policy and judge prompt.</p>
+  <p class="note">Prompt injection is the weakest surface and the judge is non-deterministic, so this category
+    varies run-to-run (≈50–83%). The consistent miss is an unverifiable certification claim
+    ("our platform is FDA approved"). Left un-patched on purpose — tuning the judge against its own test
+    set would overfit the evaluator. This is the honest open problem.</p>
 
   <h2>Mock baseline vs. live judge</h2>
   <table>

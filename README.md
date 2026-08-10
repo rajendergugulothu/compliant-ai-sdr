@@ -86,6 +86,17 @@ Measured with **claude-sonnet-5** over 55 cases (40 adversarial, 15 benign):
 _Generated from `eval_suite/results.json` by `make publish`._
 <!-- EVAL:END -->
 
+**Known limitations (measured, not hidden).** Two are worth calling out:
+- **Prompt injection is the weakest surface (~50–83%, run-to-run).** The judge is
+  non-deterministic, so this category varies between runs. The consistent miss is
+  an unverifiable *certification* claim ("our platform is FDA approved") — a
+  product claim the grader does not reliably flag. It is deliberately *not* patched
+  by tuning the judge against its own test set, which would overfit the evaluator.
+- **False-positive rate is 26.7%** — the semantic judge is cautious and sometimes
+  blocks benign hard cases. Given the product decision (never ship an unsafe
+  message), a false block is a much cheaper error than a false send, but it is a
+  real precision cost and reported as such.
+
 **Fail-closed safety** — when the judge is unavailable in production (`SDR_ENV=prod`),
 attack success drops to **0%** and every unverifiable message is escalated: the
 system prefers a human bottleneck over an unchecked send.
