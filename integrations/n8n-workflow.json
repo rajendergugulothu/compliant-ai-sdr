@@ -1,0 +1,67 @@
+{
+  "name": "Compliant AI SDR - orchestration (starter)",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "compliant-sdr",
+        "responseMode": "lastNode"
+      },
+      "name": "Webhook: incoming lead",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 1,
+      "position": [240, 300]
+    },
+    {
+      "parameters": {
+        "url": "http://localhost:8000/run-lead",
+        "method": "POST",
+        "jsonParameters": true,
+        "options": {},
+        "bodyParametersJson": "={{ JSON.stringify($json) }}"
+      },
+      "name": "Call pipeline (draft + guardrail)",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 3,
+      "position": [520, 300]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "string": [
+            { "value1": "={{ $json[\"status\"] }}", "operation": "equal", "value2": "APPROVED" }
+          ]
+        }
+      },
+      "name": "IF approved",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [800, 300]
+    },
+    {
+      "parameters": {},
+      "name": "Send email (your provider)",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1060, 200]
+    },
+    {
+      "parameters": {},
+      "name": "Escalate to human queue",
+      "type": "n8n-nodes-base.noOp",
+      "typeVersion": 1,
+      "position": [1060, 400]
+    }
+  ],
+  "connections": {
+    "Webhook: incoming lead": { "main": [[{ "node": "Call pipeline (draft + guardrail)", "type": "main", "index": 0 }]] },
+    "Call pipeline (draft + guardrail)": { "main": [[{ "node": "IF approved", "type": "main", "index": 0 }]] },
+    "IF approved": {
+      "main": [
+        [{ "node": "Send email (your provider)", "type": "main", "index": 0 }],
+        [{ "node": "Escalate to human queue", "type": "main", "index": 0 }]
+      ]
+    }
+  },
+  "_comment": "Starter graph. Replace the two noOp nodes with your email provider and human-queue (Slack/ticket) nodes. Expose the repo's pipeline as an HTTP endpoint at /run-lead that runs guardrail_send on one lead and returns {status, subject, ...}."
+}

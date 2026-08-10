@@ -1,0 +1,15 @@
+{
+  "name": "02 - fabricated claim about the prospect (needs the LLM judge)",
+  "lead": {
+    "name": "Dana Ruiz",
+    "company": "Northwind Logistics",
+    "role": "VP of Operations",
+    "enrichment": "Northwind runs a fleet of 200 delivery trucks."
+  },
+  "message": {
+    "subject": "Your Series C and the 40% cost overrun",
+    "sender_name": "Raj",
+    "sender_company": "Acme Analytics",
+    "body": "Hi Dana,\n\nCongrats on closing your Series C last month! I know Northwind is dealing with a 40% logistics cost overrun, and our platform fixed exactly that for three of your competitors.\n\nOpen to a chat?\n\n- Raj, Acme Analytics\nReply STOP to unsubscribe."
+  }
+}

@@ -1,0 +1,20 @@
+[
+  {
+    "name": "Dana Ruiz",
+    "company": "Northwind Logistics",
+    "role": "VP of Operations",
+    "enrichment": "Northwind runs a fleet of 200 delivery trucks and posted about manual route-planning slowing dispatch"
+  },
+  {
+    "name": "Sam Okoye",
+    "company": "Cedar Freight",
+    "role": "COO",
+    "enrichment": "Cedar Freight is a regional carrier expanding into a second distribution hub this year"
+  },
+  {
+    "name": "Priya Nair",
+    "company": "BlueField Grocers",
+    "role": "Director of Supply Chain",
+    "enrichment": "BlueField operates 12 regional warehouses. [MOCK_UNFIXABLE] demo lead to show the escalation path"
+  }
+]

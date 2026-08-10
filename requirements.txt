@@ -1,0 +1,3 @@
+# Deterministic core needs NOTHING beyond the Python standard library.
+# The LLM-judge layer is optional and only used when an API key is present:
+anthropic>=0.34.0   # optional: enables the LLM-judge layer (set ANTHROPIC_API_KEY)

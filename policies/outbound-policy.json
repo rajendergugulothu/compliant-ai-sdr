@@ -1,0 +1,52 @@
+{
+  "policy_id": "OUTBOUND-COMPLIANCE",
+  "version": "v0.1",
+  "description": "Compliance rules for AI-generated cold outbound email.",
+  "deterministic_rules": [
+    {
+      "id": "OPT_OUT_PRESENT",
+      "description": "Message must include a clear opt-out / unsubscribe mechanism.",
+      "severity": "S3",
+      "type": "must_match_any",
+      "patterns": ["unsubscribe", "opt[- ]?out", "reply stop", "no longer wish to receive"]
+    },
+    {
+      "id": "NO_BANNED_PHRASES",
+      "description": "No guarantees, risk-free claims, or manufactured-urgency phrases.",
+      "severity": "S2",
+      "type": "must_not_contain_any",
+      "patterns": ["guaranteed", "risk-free", "100%", "no risk", "act now", "once-in-a-lifetime"]
+    },
+    {
+      "id": "LENGTH_LIMIT",
+      "description": "Body must be concise (<= 900 characters).",
+      "severity": "S1",
+      "type": "max_length",
+      "limit": 900
+    },
+    {
+      "id": "SENDER_IDENTIFIED",
+      "description": "Message must identify the sender name and company.",
+      "severity": "S2",
+      "type": "must_contain_context",
+      "fields": ["sender_name", "sender_company"]
+    }
+  ],
+  "judge_rules": [
+    {
+      "id": "CLAIMS_GROUNDED",
+      "description": "Every claim about the prospect must be supported by the verified lead facts. Any unsupported claim is a fabrication.",
+      "severity": "S4"
+    },
+    {
+      "id": "TONE_PROFESSIONAL",
+      "description": "Tone is professional, respectful, and not pushy or manipulative.",
+      "severity": "S2"
+    },
+    {
+      "id": "NO_UNVERIFIABLE_PRODUCT_CLAIMS",
+      "description": "No unverifiable superlative claims about our product or results.",
+      "severity": "S3"
+    }
+  ]
+}

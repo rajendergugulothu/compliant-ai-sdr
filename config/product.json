@@ -1,0 +1,7 @@
+{
+  "sender_name": "Raj",
+  "sender_company": "Acme Analytics",
+  "pitch": "We help operations teams cut route-planning time with automated routing.",
+  "allowed_claims": "We reduce manual planning effort. Results vary by customer; no guarantees.",
+  "max_len": 700
+}

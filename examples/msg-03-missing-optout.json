@@ -1,0 +1,15 @@
+{
+  "name": "03 - missing opt-out (deterministic S3 -> BLOCK)",
+  "lead": {
+    "name": "Dana Ruiz",
+    "company": "Northwind Logistics",
+    "role": "VP of Operations",
+    "enrichment": "Northwind runs a fleet of 200 delivery trucks."
+  },
+  "message": {
+    "subject": "Route planning at Northwind",
+    "sender_name": "Raj",
+    "sender_company": "Acme Analytics",
+    "body": "Hi Dana,\n\nWe help operations teams cut route-planning time. Worth a quick look next week?\n\n- Raj, Acme Analytics"
+  }
+}
