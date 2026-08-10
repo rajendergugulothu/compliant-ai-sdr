@@ -1,22 +1,52 @@
 # Compliant AI SDR
 
-An AI outbound-email agent that is **governed by a compliance evaluation harness** —
-it drafts personalized cold emails, and every message is graded against a policy
-before it can be sent. Messages that fabricate claims, drop the opt-out, use
-manipulative language, or get hijacked by prompt injection are **blocked or
-escalated**, not sent.
+![Python](https://img.shields.io/badge/python-3.9%2B-blue)
+![status](https://img.shields.io/badge/status-runnable%20end--to--end-brightgreen)
+![LLM](https://img.shields.io/badge/LLM-mock%20or%20Anthropic-8A2BE2)
+![license](https://img.shields.io/badge/license-MIT-lightgrey)
 
-This repo is a portfolio project that deliberately fuses three role stories:
+> **An AI outbound-email agent that cannot send a non-compliant message.**
+> It drafts personalized cold emails, and a policy-driven compliance harness grades
+> every draft before the send button — each message is **sent, auto-revised, or
+> escalated to a human**. Nothing that fabricates a fact, drops the opt-out, sounds
+> manipulative, or gets hijacked by prompt injection goes out.
 
-- **AI safety engineer** — the eval harness, guardrails, severity model, and red-teaming.
-- **AI-native PM** — turning a policy into testable rules and a ship/block/escalate decision, with measured outcomes.
-- **GTM engineer** — the outbound workflow itself (enrichment → draft → send), built to be automated with Clay + n8n.
+**Why it exists.** Automating cold outbound with an LLM makes it trivial to send
+email that invents facts about a prospect, omits a required opt-out, or gets
+hijacked by injection hidden in scraped data. This project puts a measured
+compliance gate between the AI and the send button.
 
-> Status: **Steps 1–6 built and runnable end-to-end.** The whole system runs
-> offline in a built-in **mock-LLM mode** (no key needed) so you can see every
-> path; add `ANTHROPIC_API_KEY` for the real draft agent + judge, and wire the
-> Clay/n8n/CRM adapters (dry-run by default) to go live. See
-> [`docs/build-plan.md`](docs/build-plan.md) and [`docs/case-study.md`](docs/case-study.md).
+**One project, three role stories:**
+
+- **AI safety engineer** — the eval harness, guardrail control loop, severity model, and red-team suite with an attack-success-rate metric.
+- **AI-native PM** — policy → testable rules → a ship / block / escalate decision, with outcome metrics and explicit non-goals.
+- **GTM engineer** — the outbound workflow itself (enrich → draft → gate → send), with Clay + n8n + CRM plug-in points.
+
+## Results (mock-mode demo — reproduce with `make demo`)
+
+Guardrail control loop, 3 leads:
+
+| Metric | Value |
+|---|---|
+| Approved & sent (dry-run) | 2 / 3 |
+| Escalated to human (never sent) | 1 / 3 |
+| Auto-fixed by the guardrail (approved after a revision) | 2 |
+| Avg drafts per lead | 2.33 |
+
+**The experiment that makes the point** — same red-team attacks, two configurations:
+
+| Red-team backend | Attack success rate |
+|---|---|
+| deterministic rules only (no judge) | **100% (3/3)** — measured |
+| + LLM-as-judge (real key) | run `ANTHROPIC_API_KEY=… make redteam` → expected ≈ 0% |
+
+The gap between those two rows is the quantified value of the LLM-judge layer:
+rule-based checks alone let **every** injection/fabrication attack through.
+
+> Status: **Steps 1–6 built and runnable end-to-end.** Runs offline in a built-in
+> **mock-LLM mode** (no key needed); add `ANTHROPIC_API_KEY` for the real draft
+> agent + judge, and wire the Clay/n8n/CRM adapters (dry-run by default) to go live.
+> See [`docs/build-plan.md`](docs/build-plan.md) and [`docs/case-study.md`](docs/case-study.md).
 
 ## Run the whole thing
 
