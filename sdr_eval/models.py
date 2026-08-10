@@ -26,11 +26,14 @@ class Severity(IntEnum):
 @dataclass
 class Lead:
     """What we ACTUALLY know about a prospect. `enrichment` is the set of
-    verified facts a compliant message may reference — nothing else."""
+    verified facts a compliant message may reference — nothing else.
+
+    `email` is the stable CRM identifier used to make HubSpot writes idempotent."""
     name: str
     company: str
     role: str = ""
     enrichment: str = ""
+    email: str = ""
 
     @staticmethod
     def from_dict(d: dict) -> "Lead":
@@ -39,7 +42,13 @@ class Lead:
             company=d.get("company", ""),
             role=d.get("role", ""),
             enrichment=d.get("enrichment", ""),
+            email=d.get("email", ""),
         )
+
+    @property
+    def crm_key(self) -> str:
+        """Stable identity for CRM upserts: email when present, else name|company."""
+        return self.email.strip().lower() or f"{self.name}|{self.company}".lower()
 
 
 @dataclass

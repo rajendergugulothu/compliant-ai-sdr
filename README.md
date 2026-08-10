@@ -4,15 +4,17 @@
 ![status](https://img.shields.io/badge/status-runnable%20end--to--end-brightgreen)
 ![LLM](https://img.shields.io/badge/LLM-mock%20or%20Anthropic-8A2BE2)
 ![license](https://img.shields.io/badge/license-MIT-lightgrey)
+![CI](https://github.com/rajendergugulothu/compliant-ai-sdr/actions/workflows/ci.yml/badge.svg)
 
 > **AI outbound automation with a policy-driven safety gate that prevents
 > ungrounded, manipulative, or non-compliant messages from reaching customers.**
 
 An AI agent drafts personalized cold emails; a compliance evaluation layer grades
 every draft against a policy; and a control loop **sends, revises, or escalates**
-each message. Nothing that fabricates a fact about a prospect, drops a required
-opt-out, makes unverifiable product claims, or gets hijacked by prompt injection
-can reach the send layer.
+each message. **Every message must pass policy evaluation before reaching the send
+layer, with critical or unverifiable cases blocked or escalated for human review.**
+The architecture guarantees the gate; detection accuracy of the evaluator itself is
+measured, not assumed (see results).
 
 ## Problem
 AI SDRs can scale personalization — and just as easily scale *fabricated claims
@@ -49,22 +51,31 @@ flowchart TD
 
 ## Measured results
 
-**Evaluation suite** — 64 labeled cases (48 adversarial across 8 categories, 16 benign):
+**Evaluation suite** — 55 labeled cases: 40 adversarial across 8 categories (each
+category holds structurally distinct variants — e.g. prompt injection covers direct,
+indirect, encoded, fake-system-message, quoted, and hidden-in-fact delivery) plus
+15 benign, including hard benign cases that look risky but are compliant.
 
-| Metric | Deterministic-only (baseline) | + LLM judge |
-|---|---|---|
-| Violation catch rate | 25.0% (12/48) | **Pending measurement** |
-| Attack success rate | 75.0% (36/48) | **Pending measurement** |
-| False-positive rate (benign) | 0.0% (0/16) | **Pending measurement** |
-| Cost / message | — | **Pending measurement** |
-| Latency / message | ~0 ms (rules only) | **Pending measurement** |
+Deterministic-only baseline (measured):
 
-The baseline is deliberately the *deterministic-only* configuration: rule checks
-alone catch the two rule-shaped categories (manipulative urgency, missing opt-out)
-and **miss every semantic attack** — fabrication, injection, fake endorsement,
-unsupported claims, exfiltration, ungrounded personalization all score 0/6. Closing
-that gap is the entire reason the LLM judge exists. Run `ANTHROPIC_API_KEY=… make
-suite` to populate the judge column.
+| Metric | Deterministic-only |
+|---|---|
+| Violation catch rate | 17.5% (7/40) |
+| Attack success rate | 82.5% (33/40) |
+| False-positive rate (benign) | 0.0% (0/15) |
+
+Rule checks catch only the rule-shaped violations (some manipulative-urgency phrases,
+most missing-opt-out) and **miss the semantic attacks** — fabrication, injection,
+fake endorsement, unsupported claims, exfiltration, ungrounded personalization score
+near zero. Closing that gap is the entire reason the LLM judge exists.
+
+**With the LLM judge (deterministic + semantic):**
+
+<!-- EVAL:START -->
+_Pending measurement._ Run `ANTHROPIC_API_KEY=… make suite && make publish` to
+populate this block from `eval_suite/results.json` (catch rate, attack-success,
+false-positive rate, escalation rate, latency, cost/message).
+<!-- EVAL:END -->
 
 **Fail-closed safety** — when the judge is unavailable in production (`SDR_ENV=prod`),
 attack success drops to **0%** and every unverifiable message is escalated: the
@@ -96,6 +107,7 @@ Decision:  ESCALATE → human review   (never sent)
 - **GTM automation** — enrichment → personalization → HubSpot CRM workflow.
 - **Human review** — escalation for critical or ambiguous cases.
 - **Observability** — outcome and failure-reason metrics per run.
+- **Tested** — unit tests for the decision logic, control loop, and CRM, run in CI on every push.
 
 ## Run it
 
@@ -107,6 +119,12 @@ make pipeline    # draft -> gate -> HubSpot -> dry-run email / escalate
 make suite       # evaluation suite: catch rate, FPR, per-category, latency, cost
 make redteam     # agentic red-team against the full loop
 make prod-demo   # fail-closed: judge unavailable -> everything escalates
+make test        # unit tests (pip install pytest first)
+```
+
+Measure with the real judge, then publish the numbers into the docs:
+```bash
+ANTHROPIC_API_KEY=sk-ant-... make suite && make publish
 ```
 
 Go live:
@@ -141,9 +159,11 @@ compliant-ai-sdr/
 │   ├── models.py  llm.py  deterministic.py  judge.py  evaluate.py  run.py
 ├── sdr_agent/                      # the agent system
 │   ├── agent.py  guardrail.py  redteam.py  adapters.py  pipeline.py  metrics.py
-├── eval_suite/                     # labeled dataset generator + metrics runner
-│   ├── generate.py  run.py  cases.json
+├── eval_suite/                     # labeled dataset generator + metrics + publish
+│   ├── generate.py  run.py  publish.py  cases.json
 ├── integrations/                   # HubSpot + n8n + Clay (GTM path)
+├── tests/                          # unit tests (pytest)
+├── .github/workflows/ci.yml        # push -> install -> pytest
 ├── examples/ · docs/               # example emails, spec, build plan, case study
 └── Makefile
 ```

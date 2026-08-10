@@ -1,0 +1,22 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install dev deps
+        run: pip install pytest
+      - name: Generate evaluation dataset
+        run: python -m eval_suite.generate
+      - name: Run tests
+        run: pytest -q
+      - name: Smoke-run the evaluation suite (mock)
+        run: python -m eval_suite.run

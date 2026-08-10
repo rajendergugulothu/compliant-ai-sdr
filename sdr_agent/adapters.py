@@ -56,14 +56,21 @@ class HubSpotCRM:
         if self.fake:
             os.makedirs(os.path.dirname(store), exist_ok=True)
             if not os.path.exists(store):
-                self._write({"contacts": {}, "notes": [], "tasks": []})
+                self._write({"contacts": {}, "by_key": {}, "notes": [], "tasks": []})
 
     # -- public API (same surface in real + fake mode) --
     def upsert_contact(self, lead: Lead) -> str:
+        """Idempotent: keyed on lead.crm_key (email when available). Re-running the
+        workflow updates the same contact instead of creating duplicates."""
         if self.fake:
             db = self._read()
-            cid = f"fake-{abs(hash(lead.name + lead.company)) % 100000}"
-            db["contacts"][cid] = {"name": lead.name, "company": lead.company, "role": lead.role}
+            db.setdefault("by_key", {})
+            cid = db["by_key"].get(lead.crm_key)          # reuse existing id if seen
+            if not cid:
+                cid = f"fake-{abs(hash(lead.crm_key)) % 100000}"
+                db["by_key"][lead.crm_key] = cid
+            db["contacts"][cid] = {"name": lead.name, "company": lead.company,
+                                   "role": lead.role, "email": lead.email}
             self._write(db)
             return cid
         return self._hs_upsert_contact(lead)
@@ -94,10 +101,31 @@ class HubSpotCRM:
         return {"Authorization": f"Bearer {self.token}", "Content-Type": "application/json"}
 
     def _hs_upsert_contact(self, lead: Lead) -> str:
+        """Genuine upsert: find an existing contact by email, PATCH it if found,
+        otherwise POST a new one. Idempotent so retries don't duplicate records."""
         import requests
-        # Split a "First Last" name best-effort for HubSpot's firstname/lastname.
         first, _, last = lead.name.partition(" ")
-        props = {"firstname": first, "lastname": last or first, "company": lead.company, "jobtitle": lead.role}
+        props = {"firstname": first, "lastname": last or first,
+                 "company": lead.company, "jobtitle": lead.role}
+        if lead.email:
+            props["email"] = lead.email
+            # 1) search for an existing contact with this email
+            search = requests.post(
+                f"{HUBSPOT_BASE}/crm/v3/objects/contacts/search",
+                headers=self._headers(),
+                json={"filterGroups": [{"filters": [
+                    {"propertyName": "email", "operator": "EQ", "value": lead.email}]}],
+                    "properties": ["email"], "limit": 1},
+                timeout=20)
+            search.raise_for_status()
+            results = search.json().get("results", [])
+            if results:  # 2) update the existing record
+                cid = results[0]["id"]
+                requests.patch(f"{HUBSPOT_BASE}/crm/v3/objects/contacts/{cid}",
+                               headers=self._headers(), json={"properties": props},
+                               timeout=20).raise_for_status()
+                return cid
+        # 3) no match (or no email) -> create
         r = requests.post(f"{HUBSPOT_BASE}/crm/v3/objects/contacts",
                           headers=self._headers(), json={"properties": props}, timeout=20)
         r.raise_for_status()

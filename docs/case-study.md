@@ -15,11 +15,13 @@ control loop turns the verdict into an action — send, auto-revise, or escalate
 and a HubSpot integration records the outcome.
 
 ## Methodology
-- **Dataset:** 64 labeled cases — 48 adversarial (6 each across 8 categories:
-  fabricated facts, prompt injection, fake endorsements, unsupported product
-  claims, manipulative urgency, missing opt-out, data exfiltration, ungrounded
-  personalization) and 16 benign compliant emails. Generated reproducibly by
-  `eval_suite/generate.py`; scale freely toward 100+.
+- **Dataset:** 55 labeled cases — 40 adversarial across 8 categories and 15 benign.
+  Each category contains structurally distinct variants rather than name swaps: e.g.
+  prompt injection covers direct, indirect, encoded, fake-system-message, quoted, and
+  hidden-in-fact delivery; grounding failures cover fabricated, exaggerated, wrong-number,
+  wrong-event, and inferred claims. Benign includes hard cases that look risky but are
+  compliant (real numbers, neutral competitor mentions, soft timing). Generated
+  reproducibly by `eval_suite/generate.py`; add variants to grow coverage (not copies).
 - **Scoring:** each candidate email is graded by `evaluate()` and its verdict
   mapped to pass / block / escalate. Adversarial cases should block or escalate;
   benign cases should pass.
@@ -37,23 +39,28 @@ and a HubSpot integration records the outcome.
 
 ## Results
 
-**Deterministic-only baseline (measured, 64 cases):**
+**Deterministic-only baseline (measured, 55 cases):**
 
 | Metric | Value |
 |---|---|
-| Violation catch rate | 25.0% (12/48) |
-| Attack success rate | 75.0% (36/48) |
-| False-positive rate | 0.0% (0/16) |
+| Violation catch rate | 17.5% (7/40) |
+| Attack success rate | 82.5% (33/40) |
+| False-positive rate | 0.0% (0/15) |
 
-Per-category: manipulative urgency 6/6 and missing opt-out 6/6 (the rule-shaped
-categories); fabrication, injection, fake endorsement, unsupported claims,
-exfiltration, and ungrounded personalization all **0/6** — deterministic rules
-cannot see meaning. This gap is the justification for the LLM-judge layer.
+Per-category the rules catch only rule-shaped violations — some manipulative-urgency
+phrasing (2/5) and most missing-opt-out (3/4, one edge case slips a misspelled
+"STOPP") — while fabrication, injection, fake endorsement, exfiltration, and
+ungrounded personalization score ~0. Deterministic rules cannot see meaning; this
+gap is the justification for the LLM-judge layer.
 
-**Deterministic + LLM judge:** _Pending measurement._ Run
-`ANTHROPIC_API_KEY=… make suite`; `eval_suite/results.json` is written with catch
-rate, attack-success, false-positive rate, cost/message, and latency. Record the
-figures here (do not publish an expected number).
+**Deterministic + LLM judge:**
+
+<!-- EVAL:START -->
+_Pending measurement._ Run `ANTHROPIC_API_KEY=… make suite && make publish`;
+`eval_suite/results.json` is written and this block is filled automatically with
+catch rate, attack-success, false-positive rate, escalation rate, latency, and
+cost/message. (No expected number is published before it is measured.)
+<!-- EVAL:END -->
 
 **Fail-closed (prod, judge unavailable):** attack success 0% and 100% escalation —
 the system routes everything to a human rather than send on an unverified message.

@@ -26,11 +26,15 @@ the same guardrail, reporting attack-success rate. Ready to also drive via
 - **Done when:** you have an attack-success-rate number. ✅
   (Mock: 100% — no judge; re-run with a key to measure the judge closing the gap.)
 
-## Step 5 — GTM integration (Clay + n8n) ✅ (scaffolded, dry-run)
-`sdr_agent/adapters.py` + `integrations/` — enrichment → draft → gate → send/log with
-pluggable Clay / n8n / CRM / email points. Dry-run by default; sending stays behind
-the gate. **To finish:** drop in your accounts/keys (see `integrations/README.md`).
-- **Done when:** a lead flows from enrichment to a compliant sent email on your stack.
+## Step 5 — GTM integration — Partially complete
+`sdr_agent/adapters.py` + `integrations/`. The path is `enrichment → draft → gate →
+CRM → send`, gated throughout. Maturity:
+- ✅ HubSpot contacts / notes / tasks (real CRM v3 API + local fake backend; idempotent upsert by email)
+- ✅ n8n starter workflow (`integrations/n8n-workflow.json`)
+- ⏳ Clay enrichment (plug-in point in `EnrichmentProvider.enrich`)
+- ⏳ live email provider (`EmailSender` is dry-run by design)
+- ⏳ hosted `/run-lead` endpoint for n8n to call
+- **Done when:** a lead flows enrichment → compliant CRM record → queued email on your stack.
 
 ## Step 6 — Outcome measurement ✅ (built)
 `sdr_agent/metrics.py` + `docs/case-study.md` — approval/escalation/auto-fix rates,

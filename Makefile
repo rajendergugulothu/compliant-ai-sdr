@@ -3,7 +3,7 @@
 # Add ANTHROPIC_API_KEY for the real judge+agent, SDR_HUBSPOT_TOKEN for a real
 # HubSpot sandbox, and SDR_ENV=prod for fail-closed behavior.
 
-.PHONY: examples pipeline redteam metrics cases suite prod-demo demo clean
+.PHONY: examples pipeline redteam metrics cases suite publish prod-demo demo test clean
 
 examples:    ## Step 1: compliance harness on example emails
 	python -m sdr_eval.run
@@ -22,6 +22,12 @@ cases:       ## (re)generate the labeled evaluation dataset
 
 suite: cases ## run the evaluation suite (catch rate, FPR, latency, cost)
 	python -m eval_suite.run
+
+publish:     ## write real eval numbers from results.json into README + case study
+	python -m eval_suite.publish
+
+test:        ## run the unit tests
+	pytest -q
 
 prod-demo:   ## show fail-closed: judge unavailable -> everything escalates
 	SDR_ENV=prod python -m sdr_agent.pipeline
