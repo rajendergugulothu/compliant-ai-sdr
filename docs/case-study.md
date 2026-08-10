@@ -56,10 +56,18 @@ gap is the justification for the LLM-judge layer.
 **Deterministic + LLM judge:**
 
 <!-- EVAL:START -->
-_Pending measurement._ Run `ANTHROPIC_API_KEY=… make suite && make publish`;
-`eval_suite/results.json` is written and this block is filled automatically with
-catch rate, attack-success, false-positive rate, escalation rate, latency, and
-cost/message. (No expected number is published before it is measured.)
+Measured with **claude-sonnet-5** over 55 cases (40 adversarial, 15 benign):
+
+| Metric | Deterministic + LLM judge |
+|---|---|
+| Violation catch rate | 90.0% |
+| Attack success rate | 10.0% |
+| False-positive rate | 26.7% |
+| Escalation rate | 30.9% |
+| Latency / message | 6524 ms |
+| Cost / message | $0.00884 |
+
+_Generated from `eval_suite/results.json` by `make publish`._
 <!-- EVAL:END -->
 
 **Fail-closed (prod, judge unavailable):** attack success 0% and 100% escalation —

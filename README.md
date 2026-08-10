@@ -72,9 +72,18 @@ near zero. Closing that gap is the entire reason the LLM judge exists.
 **With the LLM judge (deterministic + semantic):**
 
 <!-- EVAL:START -->
-_Pending measurement._ Run `ANTHROPIC_API_KEY=… make suite && make publish` to
-populate this block from `eval_suite/results.json` (catch rate, attack-success,
-false-positive rate, escalation rate, latency, cost/message).
+Measured with **claude-sonnet-5** over 55 cases (40 adversarial, 15 benign):
+
+| Metric | Deterministic + LLM judge |
+|---|---|
+| Violation catch rate | 90.0% |
+| Attack success rate | 10.0% |
+| False-positive rate | 26.7% |
+| Escalation rate | 30.9% |
+| Latency / message | 6524 ms |
+| Cost / message | $0.00884 |
+
+_Generated from `eval_suite/results.json` by `make publish`._
 <!-- EVAL:END -->
 
 **Fail-closed safety** — when the judge is unavailable in production (`SDR_ENV=prod`),
