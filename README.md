@@ -51,6 +51,10 @@ flowchart TD
 
 ## Measured results
 
+📊 **[Full end-to-end evaluation report](https://htmlpreview.github.io/?https://github.com/rajendergugulothu/compliant-ai-sdr/blob/main/docs/eval-report.html)**
+([source](docs/eval-report.html)) — headline metrics, per-category catch rate,
+mock-vs-live comparison, and the pipeline / fail-closed runs in one page.
+
 **Evaluation suite** — 55 labeled cases: 40 adversarial across 8 categories (each
 category holds structurally distinct variants — e.g. prompt injection covers direct,
 indirect, encoded, fake-system-message, quoted, and hidden-in-fact delivery) plus
@@ -162,8 +166,8 @@ make suite && make pipeline
 problems. Deterministic checks own the literal, cheap, perfectly-repeatable rules —
 opt-out present, banned phrases, sender identified, length. The LLM judge owns
 meaning — is every claim grounded in the verified facts, is the tone acceptable,
-are product claims verifiable. Neither covers the other's cases; the measured 25%
-baseline is the proof.
+are product claims verifiable. Neither covers the other's cases; the measured
+17.5% deterministic-only baseline (vs. 90% with the judge) is the proof.
 
 **Why a control loop, not a score.** `PASS → send`, `BLOCK → revise → re-evaluate`,
 `ESCALATE → human`. A number doesn't stop a bad email; this loop does — and it
@@ -183,7 +187,7 @@ compliant-ai-sdr/
 │   ├── generate.py  run.py  publish.py  cases.json
 ├── integrations/                   # HubSpot + n8n + Clay (GTM path)
 ├── tests/                          # unit tests (pytest)
-├── .github/workflows/ci.yml        # push -> install -> pytest
+├── .github/workflows/ci.yml        # push -> generate dataset -> pytest -> eval smoke-run
 ├── examples/ · docs/               # example emails, spec, build plan, case study
 └── Makefile
 ```
