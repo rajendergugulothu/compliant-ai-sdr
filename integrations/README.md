@@ -1,31 +1,49 @@
-# Integrations (the GTM layer)
+# Integrations (the GTM path)
 
-These wire the compliance-gated agent into a real go-to-market stack. They're the
-Step 5 pieces — provided as clean plug-in points, not live connections, because
-they need **your** accounts and keys. Nothing here sends real email until you
-explicitly enable it.
+The finished go-to-market path is:
 
-## The shape
 ```
-Clay (enrichment) ──> n8n (orchestration) ──> this repo's pipeline ──> CRM + send
+New lead → n8n → verified context → AI SDR agent → compliance gate
+                                                         │
+                          ┌──────────────┬───────────────┼───────────────┐
+                        PASS           BLOCK           ESCALATE
+                          │              │                 │
+                   HubSpot contact   regenerate       HubSpot task
+                   + note            (feedback loop)   (human review)
+                          │
+                   dry-run email queue
 ```
 
-- **Clay** — builds the verified lead facts. In `sdr_agent/adapters.py`,
-  `EnrichmentProvider.enrich()` is where you call Clay and map results onto
-  `Lead.enrichment`. Only put **verified** facts there — the judge treats anything
-  in that field as ground truth.
-- **n8n** — orchestrates the flow and calls the pipeline. See `n8n-workflow.json`
-  for an importable starter (webhook -> HTTP call -> branch on APPROVED/ESCALATED).
-- **CRM** (HubSpot/Salesforce) — `CRMLogger.log()` currently appends JSONL; swap in
-  an upsert to your CRM.
-- **Email** — `EmailSender(live=True)` is intentionally `NotImplementedError` until
-  you wire a provider, so you can't send by accident.
+Nothing sends real email — the email step is dry-run until you deliberately wire
+a provider. HubSpot is the one **finished** integration.
 
-## To go live (checklist)
-1. Fill `EnrichmentProvider.enrich()` with your Clay call.
-2. Implement `EmailSender.send()` for your provider and construct `EmailSender(live=True)` in `pipeline.py`.
-3. Point `CRMLogger` at your CRM.
-4. Import `n8n-workflow.json` into n8n and set the webhook + expose the pipeline as an HTTP endpoint.
-5. Keep the guardrail between draft and send — that's the whole point.
+## HubSpot (the chosen, finished integration)
+`sdr_agent/adapters.py :: HubSpotCRM` speaks the HubSpot CRM v3 API (contacts,
+notes, tasks). It runs in two modes automatically:
 
-See `clay-setup.md` for the Clay table setup.
+- **Fake (default):** no token → writes to `runs/hubspot_fake.json`, so the whole
+  pipeline runs and is verifiable offline.
+- **Live (sandbox):** export a private-app token and it hits HubSpot for real:
+  ```bash
+  export SDR_HUBSPOT_TOKEN=pat-...      # HubSpot > Settings > Integrations > Private Apps
+  python -m sdr_agent.pipeline
+  ```
+  On PASS it upserts the contact and logs a note; on ESCALATE it creates a task
+  for a human. Use a **sandbox / test account** — no need to email real people.
+
+Required token scopes: `crm.objects.contacts.write`, plus notes/tasks write.
+
+## n8n (orchestration)
+`n8n-workflow.json` is an importable starter: webhook → call the pipeline endpoint
+→ branch on `APPROVED` / `ESCALATED`. Replace the two placeholder nodes with your
+HubSpot + human-queue (Slack/ticket) nodes. Expose the pipeline as an HTTP endpoint
+at `/run-lead` that runs `guardrail_send` on one lead and returns `{status, ...}`.
+
+## Clay (enrichment)
+`EnrichmentProvider.enrich()` is the plug-in point — call Clay and map results onto
+`Lead.enrichment` (verified facts only; that field is treated as ground truth by
+the judge). See `clay-setup.md`.
+
+## Email
+`EmailSender(live=True)` is intentionally `NotImplementedError` until you wire a
+provider, so the pipeline cannot send by accident.

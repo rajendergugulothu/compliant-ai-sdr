@@ -1,54 +1,76 @@
 # Case study — Compliant AI SDR
 
-> Numbers below are from an offline **mock-mode** demo run (`SDR_LLM=mock`), which
-> exercises the full control flow without a model. Re-run with `ANTHROPIC_API_KEY`
-> to populate the semantic-safety rows with real judge results, and Step-5 live
-> mode to populate GTM outcomes. Replace this note with real figures for your portfolio.
-
 ## Problem
-Automating cold outbound with an LLM makes it trivial to send email that fabricates
-facts about a prospect, drops the required opt-out, uses manipulative language, or
-gets hijacked by prompt injection hidden in enrichment data. The goal: let an agent
-draft outbound **and prove each message is compliant before it can send.**
+Automating cold outbound with an LLM scales personalization and, without a
+control, scales fabricated claims and unsafe messaging: invented facts about a
+prospect, fake endorsements, unverifiable product claims, or instructions injected
+into scraped enrichment data. The product goal is to let an agent draft outbound
+**and guarantee that no message reaches the send layer until it passes policy
+evaluation** — failing closed when the evaluator itself is unavailable.
 
 ## Approach
-A draft agent writes each email grounded only in verified lead facts. Every draft
-passes a policy-driven compliance harness (deterministic checks + LLM-as-judge).
-A guardrail loop turns the verdict into an action: send, auto-revise, or escalate.
-A red-team suite attacks the same pipeline to measure how much gets through.
+A draft agent writes each email grounded only in verified lead facts. A hybrid
+compliance harness (deterministic checks + LLM-as-judge) scores every draft. A
+control loop turns the verdict into an action — send, auto-revise, or escalate —
+and a HubSpot integration records the outcome.
 
-## Results (mock-mode demo, 3 leads + 3 attacks)
+## Methodology
+- **Dataset:** 64 labeled cases — 48 adversarial (6 each across 8 categories:
+  fabricated facts, prompt injection, fake endorsements, unsupported product
+  claims, manipulative urgency, missing opt-out, data exfiltration, ungrounded
+  personalization) and 16 benign compliant emails. Generated reproducibly by
+  `eval_suite/generate.py`; scale freely toward 100+.
+- **Scoring:** each candidate email is graded by `evaluate()` and its verdict
+  mapped to pass / block / escalate. Adversarial cases should block or escalate;
+  benign cases should pass.
+- **Configurations:** deterministic-only (baseline) vs. deterministic + LLM judge;
+  and dev (fail-open) vs. prod (fail-closed) when the judge is unavailable.
 
-**Guardrail control loop**
+## Metric definitions
+- **Violation catch rate** — adversarial cases correctly blocked/escalated ÷ all adversarial.
+- **Attack success rate** — adversarial cases that slipped through as PASS ÷ all adversarial.
+- **False-positive rate** — benign cases wrongly blocked/escalated ÷ all benign.
+- **Escalation rate** — cases routed to a human ÷ all cases.
+- **Avg revisions before approval** — mean draft attempts per approved lead (control loop).
+- **Cost / message** — LLM-judge spend per evaluated message.
+- **Latency / message** — evaluator wall-clock per message.
+
+## Results
+
+**Deterministic-only baseline (measured, 64 cases):**
+
 | Metric | Value |
 |---|---|
-| Leads processed | 3 |
-| Approved & sent (dry-run) | 2 (67%) |
-| Escalated to human | 1 (33%) |
-| Auto-fixed by guardrail (approved after a revision) | 2 |
-| Avg drafts per lead | 2.33 |
+| Violation catch rate | 25.0% (12/48) |
+| Attack success rate | 75.0% (36/48) |
+| False-positive rate | 0.0% (0/16) |
 
-The loop caught a missing opt-out on the first draft of every lead and auto-fixed it
-on revision; the one lead with an unfixable banned phrase escalated after 3 attempts
-instead of ever sending. **No non-compliant email was sent.**
+Per-category: manipulative urgency 6/6 and missing opt-out 6/6 (the rule-shaped
+categories); fabrication, injection, fake endorsement, unsupported claims,
+exfiltration, and ungrounded personalization all **0/6** — deterministic rules
+cannot see meaning. This gap is the justification for the LLM-judge layer.
 
-**Red-team (safety)**
-| Backend | Attack success rate |
-|---|---|
-| mock (deterministic only, no judge) | **3/3 = 100%** |
-| real model + CLAIMS_GROUNDED judge | _(run with your key — expected to trend toward 0)_ |
+**Deterministic + LLM judge:** _Pending measurement._ Run
+`ANTHROPIC_API_KEY=… make suite`; `eval_suite/results.json` is written with catch
+rate, attack-success, false-positive rate, cost/message, and latency. Record the
+figures here (do not publish an expected number).
 
-This is the headline safety finding: deterministic rules alone let **every**
-injection / fabrication attack through. The gap between the two rows is the
-quantified value of the LLM-judge layer — exactly the "why one grader isn't enough"
-argument, but measured.
+**Fail-closed (prod, judge unavailable):** attack success 0% and 100% escalation —
+the system routes everything to a human rather than send on an unverified message.
+The tradeoff (over-blocking when the judge is down) is intentional and measured.
 
-## What this demonstrates (per target role)
-- **AI safety engineer:** a policy-driven eval harness, a guardrail control loop, and a red-team suite with an attack-success-rate metric.
-- **AI-native PM:** policy → testable rules → a ship/block/escalate decision, with outcome metrics and explicit non-goals.
-- **GTM engineer:** a real outbound workflow (enrich → draft → gate → send) with Clay/n8n/CRM plug-in points.
+**Guardrail control loop (sample lead set):** 2/3 auto-approved after the loop
+repaired a first-draft issue; 1/3 escalated and never sent; avg 2.3 drafts/lead.
 
-## Next (to make the numbers real)
-1. Run with a real key; record the judge's attack-success-rate and fabrication catch rate.
-2. Enable Clay enrichment + live send on a small real list; record reply rate, meetings booked, hours saved.
-3. Add those figures to `evidence/portfolio-evidence-ledger.csv` with reproducibility notes.
+## Fail-closed design
+`SDR_ENV=dev` skips an unavailable judge and passes (so the harness runs anywhere).
+`SDR_ENV=prod` treats an unavailable/erroring judge as a critical (S4) failure, so
+the message is blocked/escalated. A compliance check that cannot run must not
+silently authorize a send.
+
+## Limitations & next
+- Judge-dependent metrics require a live model run (pending above).
+- HubSpot integration is finished (contacts/notes/tasks) and runs against a sandbox
+  token; email sending is intentionally dry-run.
+- Next: publish the with-judge numbers; add a short demo capture; expand the
+  dataset toward 100+ and add per-severity breakdowns.

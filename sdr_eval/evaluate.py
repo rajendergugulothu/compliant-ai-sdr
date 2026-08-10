@@ -7,6 +7,10 @@ from .llm import LLMClient
 from .models import EvalReport, Lead, Message
 
 
-def evaluate(policy: dict, lead: Lead, message: Message, client: LLMClient | None = None) -> EvalReport:
-    findings = run_deterministic(policy, message) + run_judge(policy, lead, message, client=client)
+def evaluate(policy: dict, lead: Lead, message: Message,
+             client: LLMClient | None = None, fail_closed: bool | None = None) -> EvalReport:
+    findings = (
+        run_deterministic(policy, message)
+        + run_judge(policy, lead, message, client=client, fail_closed=fail_closed)
+    )
     return EvalReport(lead=lead, message=message, findings=findings)
